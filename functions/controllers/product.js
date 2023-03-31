@@ -31,8 +31,8 @@ exports.getOneProduct = (req, res) => {
 
 exports.createProduct = (req, res) => {
   const productObject = JSON.parse(req.body.product);
-  delete productObject._id;
-  delete productObject.userId;
+  
+  console.log(productObject)
 
   if (productObject) {
     const product = new Product({
@@ -48,9 +48,11 @@ exports.createProduct = (req, res) => {
         res.status(201).json({ message: "product ajouté !" });
       })
       .catch((error) => {
+        console.log(error + "error6334ds")
         res.status(400).json({ error });
       });
   } else {
+    console.log(error + "error5666s")
     res.status(404).json({ message: "L'un des champs n'est pas valide" });
   }
 };
@@ -64,6 +66,8 @@ exports.modifyProduct = (req, res) => {
         }`,
       }
     : { ...req.body };
+
+    console.log(productObject)
 
     Product
       .findOne({ _id: req.params.id })
@@ -82,11 +86,13 @@ exports.modifyProduct = (req, res) => {
               res.status(200).json({ message: "product modifié!" });
             })
             .catch((error) => {
+              console.log(error + "error5s4ds")
               res.status(400).json({ error });
             });
         }
       })
       .catch((error) => {
+        console.log(error + "error7884ds")
         res.status(404).json({ error });
       });
 };

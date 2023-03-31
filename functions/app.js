@@ -1,6 +1,5 @@
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
-const functions = require('firebase-functions');
 const express = require('express');
 const cors = require("cors");
 const helmet = require("helmet");
@@ -15,6 +14,8 @@ mongoose.connect(process.env.MONGO_SECRET,
     useUnifiedTopology: true })
   .then(() => console.log('Connexion à MongoDB réussie !'))
   .catch(() => console.log('Connexion à MongoDB échouée !'));
+
+mongoose.set('strictQuery', false);
 
 const app = express();
 
@@ -32,13 +33,13 @@ app.use(bodyParser.json());
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 
-
 app.get('/', (req, res) => {
-  res.send('Hello from Firebase!');
-});
+  res.send('Hello World!')
+})
 
 app.use('/api/product', productRoutes);
 app.use('/api/user', userRoutes);
 app.use('/images', express.static(path.join(__dirname, 'images')));
+
 
 module.exports = app;
