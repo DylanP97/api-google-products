@@ -1,5 +1,87 @@
 const Product = require("../models/product");
 const fs = require("fs");
+const uploadFile = require("../middleware/upload-config");
+const UserModel = require("../models/user");
+
+exports.createProduct = async (req, res) => {
+  try {
+    const productObject = req.file
+      ? {
+          ...JSON.parse(req.body.product),
+          imageUrl: await uploadFile(req.file),
+        }
+      : {  ...JSON.parse(req.body.product) };
+
+    const user = await UserModel.findOne({ _id: req.auth.userId });
+    if (!user.isAdmin) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!productObject) {
+      return res.status(400).json({ message: "Invalid product data" });
+    }
+
+    const product = new Product({
+      ...productObject,
+      userId: req.auth.userId,
+    });
+
+    await product.save();
+    res.status(201).json({ message: "Product added!" });
+  } catch (error) {
+    console.error("Error creating product:", error);
+    res.status(500).json({ message: "Error creating product" });
+  }
+};
+
+
+exports.modifyProduct = async (req, res) => {
+  try {
+    const productObject = req.file
+      ? {
+          ...JSON.parse(req.body.product),
+          imageUrl: await uploadFile(req.file),
+        }
+        : {  ...JSON.parse(req.body.product) };
+
+    const user = await UserModel.findOne({ _id: req.auth.userId });
+    if (!user.isAdmin) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const updatedProduct = await Product.findOneAndUpdate(
+      { _id: req.params.id },
+      { ...productObject, _id: req.params.id },
+      { new: true }
+    );
+
+    res.status(200).json({ ...updatedProduct });
+  } catch (error) {
+    console.error("Error modifying product:", error);
+    res.status(500).json({ message: "Error modifying product" });
+  }
+};
+
+
+exports.deleteProduct = (req, res) => {
+  Product.findOne({ _id: req.params.id })
+    .then((product) => {
+      if (product.userId !== req.auth.userId) {
+        res.status(401).json({ message: "Non-autorisé" });
+      } else {
+        const filename = product.imageUrl.split("/images/")[1];
+        fs.unlink(`../images/${filename}`, () => {
+          product
+            .deleteOne({ _id: req.params.id })
+            .then(() => {
+              res.status(200).json({ message: "Objet supprimé !" });
+            })
+            .catch(() => res.status(401).json({ message: "Non-authorisé 2" }));
+        });
+      }
+    })
+    .catch((error) => res.status(500).json({ error }));
+};
 
 exports.getProducts = (req, res) => {
   const limit = parseInt(req.query.pageSize) || 10;
@@ -27,96 +109,6 @@ exports.getOneProduct = (req, res) => {
   Product.findOne({ _id: req.params.id })
     .then((product) => res.status(200).json(product))
     .catch((error) => res.status(404).json({ error }));
-};
-
-exports.createProduct = (req, res) => {
-  const productObject = JSON.parse(req.body.product);
-  
-  console.log(productObject)
-
-  if (productObject) {
-    const product = new Product({
-      ...productObject,
-      imageUrl: `${req.protocol}://${req.get("host")}/images/${
-        req.file.filename
-      }`,
-      userId: req.auth.userId,
-    });
-    product
-      .save()
-      .then(() => {
-        res.status(201).json({ message: "product ajouté !" });
-      })
-      .catch((error) => {
-        console.log(error + "error6334ds")
-        res.status(400).json({ error });
-      });
-  } else {
-    console.log(error + "error5666s")
-    res.status(404).json({ message: "L'un des champs n'est pas valide" });
-  }
-};
-
-exports.modifyProduct = (req, res) => {
-  const productObject = req.file
-    ? {
-        ...JSON.parse(req.body.product),
-        imageUrl: `${req.protocol}://${req.get("host")}/images/${
-          req.file.filename
-        }`,
-      }
-    : { ...req.body };
-
-    console.log(productObject)
-
-    Product
-      .findOne({ _id: req.params.id })
-
-      .then((product) => {
-        if (product.userId != req.auth.userId) {
-          res.status(401).json({ message: "Unauthorized" });
-        } else {
-          Product
-            .updateOne(
-              { _id: req.params.id },
-              { ...productObject, _id: req.params.id }
-            )
-
-            .then(() => {
-              res.status(200).json({ message: "product modifié!" });
-            })
-            .catch((error) => {
-              console.log(error + "error5s4ds")
-              res.status(400).json({ error });
-            });
-        }
-      })
-      .catch((error) => {
-        console.log(error + "error7884ds")
-        res.status(404).json({ error });
-      });
-};
-
-exports.deleteProduct = (req, res) => {
-  Product.findOne({ _id: req.params.id })
-    .then((product) => {
-      if (product.userId !== req.auth.userId) {
-        res.status(401).json({ message: "Non-autorisé" });
-      } else {
-        const filename = product.imageUrl.split("/images/")[1];
-        fs.unlink(`../images/${filename}`, () => {
-          product
-            .deleteOne({ _id: req.params.id })
-            .then(() => {
-              res.status(200).json({ message: "Objet supprimé !" });
-            })
-            .catch(() =>
-              res.status(401).json({ message: "Non-authorisé 2" })
-            );
-        });
-      }
-    })
-    .catch((error) => res.status(500).json({ error }));
 };
 
 exports.likeProduct = (req, res) => {

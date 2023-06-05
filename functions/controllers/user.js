@@ -24,47 +24,46 @@ exports.getOneUser = async (req, res) => {
 };
 
 exports.signup = async (req, res) => {
+  const { email, password, username } = req.body;
+  console.log(email)
+
   try {
-    const { email, password, username } = req.body;
 
     const user = await User.findOne({ email });
     if (user) {
       return res.status(400).json({ message: "User already exists" });
+    } else {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+
+      const newUser = new User({
+        email,
+        password: hashedPassword,
+        username,
+      });
+      await newUser.save();
+
+      res.status(201).json({ message: "User created" });
     }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const newUser = new User({
-      email,
-      password: hashedPassword,
-      username,
-    });
-    await newUser.save();
-
-    res.status(201).json({ message: "User created" });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
-
+  
   User.findOne({ email: email })
     .then((user) => {
       if (user === null) {
-        res
-          .status(401)
-          .json({ message: "Paire email/mot de passe incorrecte" });
+        res.status(401).json({ message: "user not found" });
       } else {
         bcrypt
           .compare(password, user.password)
           .then((valid) => {
             if (!valid) {
-              res
-                .status(401)
-                .json({ message: "Paire email/mot de passe incorrecte" });
+              console.log("password not valid");
+              res.status(401).json({ message: "password not valid" });
             } else {
               res.status(200).json({
                 userId: user._id,
@@ -72,6 +71,7 @@ exports.login = async (req, res) => {
                 token: jwt.sign({ userId: user._id }, "RANDOM_TOKEN_SECRET", {
                   expiresIn: "24h",
                 }),
+                isAdmin: user.isAdmin,
               });
             }
           })

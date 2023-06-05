@@ -2,3 +2,4 @@ node_modules
 .env
 images/*
 !images/.gitkeep
+api--products-2-firebase-adminsdk-d8fle-7d3baea662.json
